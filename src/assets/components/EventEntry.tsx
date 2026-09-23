@@ -35,14 +35,12 @@ export function EventEntry({ onSubmit, isSubmitting = false }: EventEntryProps) 
       setMessage('Event saved to Google Calendar.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to save event.')
+      throw error
     }
   }
 
   return (
     <section className="w-full max-w-xl space-y-4">
-      <label htmlFor="event-entry" className="block text-left text-sm font-medium text-gray-700">
-        Describe your event
-      </label>
       <textarea
         id="event-entry"
         value={text}
@@ -51,8 +49,20 @@ export function EventEntry({ onSubmit, isSubmitting = false }: EventEntryProps) 
           setParsedEvent(null)
           setMessage(null)
         }}
-        placeholder="Lunch with Alex tomorrow at noon for one hour"
-        className="min-h-32 w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+
+        onKeyDown={(e) => {
+            if (e.key === 'Enter'){
+                e.preventDefault()
+                if (!parsedEvent) {
+                    handleParse()
+                }
+                else if (!isSubmitting){
+                    void handleSubmit()
+                    setText('')
+                }
+            }
+        }}
+        className="min-h-13 w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
       />
       <div className="flex flex-wrap justify-center gap-3">
         <button
