@@ -35,8 +35,20 @@ export async function createGoogleCalendarEvent(
 
   if (!response.ok) {
     const details = await response.text()
-    console.error('Google Calendar request failed:', details)
-    throw new Error('Google Calendar could not save this event.')
+    let detailMessage = details
+    try {
+      const payload = JSON.parse(details) as { error?: { message?: string } }
+      detailMessage = payload.error?.message || details
+    } catch {
+      // Keep plain-text API responses as-is.
+    }
+
+    const safeDetails = detailMessage.trim().slice(0, 240)
+    throw new Error(
+      safeDetails
+        ? `Google Calendar could not save this event (${response.status}): ${safeDetails}`
+        : `Google Calendar could not save this event (${response.status}).`,
+    )
   }
 
   return response.json() as Promise<GoogleCalendarEventResponse>

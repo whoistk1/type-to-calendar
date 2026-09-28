@@ -1,8 +1,20 @@
 # Dependencies
 node_modules/
+node_modules/.package-lock.json
+node_modules/.vite/
 
 # Build output
 dist/
+.vite/
+
+# TypeScript and test output
+*.tsbuildinfo
+coverage/
+.vitest/
+
+# Supabase local development state
+supabase/.branches/
+supabase/.temp/
 
 # Local environment files
 .env

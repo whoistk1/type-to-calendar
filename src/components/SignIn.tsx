@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from './supabaseClient'
+import { supabase } from '../lib/supabaseClient'
 
 interface SignInProps {
   onSessionChange?: (session: Session | null) => void
@@ -37,7 +37,7 @@ export function SignIn({ onSessionChange }: SignInProps) {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
-        scopes: 'https://www.googleapis.com/auth/calendar',
+        scopes: 'https://www.googleapis.com/auth/calendar.events',
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -55,7 +55,10 @@ export function SignIn({ onSessionChange }: SignInProps) {
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('Error signing out:', error)
+      return
     }
+
+    window.location.assign(window.location.origin)
   }
 
   if (loading) {
@@ -66,11 +69,11 @@ export function SignIn({ onSessionChange }: SignInProps) {
     <div className="flex flex-col items-center gap-3">
       {session ? (
         <div className="flex flex-col items-center gap-3">
-          <p className="text-sm font-medium text-gray-700">
-            Hey there, <span className="text-indigo-600 font-semibold">{session.user.email}</span>
-          </p>
+          
           <button
+            type="button"
             onClick={signOut}
+            aria-label="Sign out of Google Calendar"
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
           >
             Sign Out
