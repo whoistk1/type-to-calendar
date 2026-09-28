@@ -19,7 +19,7 @@ Implemented:
 - Ready/blocked counts, selection controls, and draft removal.
 - Independent creation of selected drafts through the Google Calendar API.
 - Per-draft pending, success, failure, and retry states.
-- Google Calendar links on successful draft cards.
+- One shared Google Calendar link after at least one draft succeeds.
 - Missing provider-token errors are surfaced on the affected draft.
 - Environment-based Supabase configuration with an `.env.example` template.
 - Safe Google API status and error details on failed drafts.

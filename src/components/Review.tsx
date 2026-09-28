@@ -5,7 +5,6 @@ interface ReviewProps {
   selected: boolean
   creationState: 'idle' | 'pending' | 'success' | 'failure'
   error?: string
-  calendarLink?: string
   onChange: (draft: EventDraft) => void
   onToggleSelected: () => void
   onRemove: () => void
@@ -17,7 +16,6 @@ export function Review({
   selected,
   creationState,
   error,
-  calendarLink,
   onChange,
   onToggleSelected,
   onRemove,
@@ -109,11 +107,6 @@ export function Review({
               Retry
             </button>
           </>
-        )}
-        {calendarLink && (
-          <a href={calendarLink} target="_blank" rel="noreferrer" className="font-medium underline">
-            Open in Google Calendar
-          </a>
         )}
       </div>
     </section>

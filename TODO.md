@@ -15,7 +15,7 @@ This checklist tracks the remaining work against the v1 PRD. The multiline draft
 - [x] Create selected drafts independently while keeping successful results when another draft fails.
 - [x] Show per-draft pending, success, and failure states.
 - [x] Add an individual retry action for failed drafts.
-- [x] Render the Google Calendar link in the successful draft card.
+- [x] Render one shared Google Calendar link after at least one draft succeeds.
 - [x] Change the Google OAuth scope in `src/components/SignIn.tsx` to the least-privilege `calendar.events` scope.
 - [x] Surface missing `provider_token` and Google API failures in the affected draft state.
 

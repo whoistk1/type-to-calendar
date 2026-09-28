@@ -1,23 +1,24 @@
 import { useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { parseLine, type EventDraft } from '../lib/parseEvent'
 import type { GoogleCalendarEventResponse } from '../lib/googleCalendar'
 import { Review } from './Review'
-
+import { SignIn } from './SignIn'
 
 export type { ParsedEvent } from '../lib/parseEvent'
 
 interface EventEntryProps {
   onCreateEvent?: (draft: EventDraft) => Promise<GoogleCalendarEventResponse>
+  onSessionChange?: (session: Session | null) => void
 }
 
 type CreationState = 'idle' | 'pending' | 'success' | 'failure'
 type DraftState = {
   creationState: CreationState
   error?: string
-  calendarLink?: string
 }
 
-export function EventEntry({ onCreateEvent }: EventEntryProps) {
+export function EventEntry({ onCreateEvent, onSessionChange }: EventEntryProps) {
   const [text, setText] = useState('')
   const [drafts, setDrafts] = useState<EventDraft[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -70,12 +71,11 @@ export function EventEntry({ onCreateEvent }: EventEntryProps) {
     }))
 
     try {
-      const response = await onCreateEvent(draft)
+      await onCreateEvent(draft)
       setDraftStates((currentStates) => ({
         ...currentStates,
         [draft.id]: {
           creationState: 'success',
-          calendarLink: response.htmlLink,
         },
       }))
     } catch (error) {
@@ -111,6 +111,9 @@ export function EventEntry({ onCreateEvent }: EventEntryProps) {
   )
   const canCreate = drafts.some(
     (draft) => draft.status === 'ready' && selectedIds.has(draft.id),
+  )
+  const hasCreatedEvent = Object.values(draftStates).some(
+    (state) => state.creationState === 'success',
   )
 
   return (
@@ -154,7 +157,6 @@ export function EventEntry({ onCreateEvent }: EventEntryProps) {
                   selected={selectedIds.has(draft.id)}
                   creationState={state.creationState}
                   error={state.error}
-                  calendarLink={state.calendarLink}
                   onChange={updateDraft}
                   onToggleSelected={() => toggleSelected(draft.id)}
                   onRemove={() => removeDraft(draft.id)}
@@ -171,8 +173,22 @@ export function EventEntry({ onCreateEvent }: EventEntryProps) {
           >
             {hasPendingDraft ? 'Creating events...' : 'Create selected events'}
           </button>
+          {hasCreatedEvent && (
+            <a
+              href="https://calendar.google.com/calendar/u/0/r"
+              target="_blank"
+              rel="noreferrer"
+              className="block text-center font-medium underline"
+            >
+              Open Google Calendar
+            </a>
+          )}
         </>
       )}
+
+      <div className="pt-4">
+        <SignIn onSessionChange={onSessionChange} />
+      </div>
 
     </section>
   )
