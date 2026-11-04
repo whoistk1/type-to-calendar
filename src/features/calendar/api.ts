@@ -1,19 +1,35 @@
 import type { Session } from '@supabase/supabase-js'
-import type { ParsedEvent } from './parseEvent'
+import type { EventDraft } from '../parser/parseEvent'
 
 export interface GoogleCalendarEventResponse {
   id: string
   htmlLink?: string
 }
 
+export class GoogleCalendarAuthorizationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'GoogleCalendarAuthorizationError'
+  }
+}
+
+function calendarEventId(draftId: string) {
+  const id = /^[0-9a-f-]{36}$/i.test(draftId)
+    ? draftId.replace(/-/g, '').toLowerCase()
+    : Array.from(draftId)
+        .map((character) => character.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('')
+  return id.length >= 5 ? id : `a${id.padEnd(4, '0')}`
+}
+
 export async function createGoogleCalendarEvent(
   session: Session,
-  event: ParsedEvent,
+  event: EventDraft,
 ): Promise<GoogleCalendarEventResponse> {
-  const providerToken = session.provider_token
-
-  if (!providerToken) {
-    throw new Error('Your Google Calendar permission has expired. Please sign in again.')
+  if (!session.provider_token) {
+    throw new GoogleCalendarAuthorizationError(
+      'Your Google Calendar permission has expired. Please reconnect Google Calendar.',
+    )
   }
 
   const response = await fetch(
@@ -21,10 +37,11 @@ export async function createGoogleCalendarEvent(
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${providerToken}`,
+        Authorization: `Bearer ${session.provider_token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        id: calendarEventId(event.id),
         summary: event.title,
         description: event.description || undefined,
         start: { dateTime: event.start },
@@ -32,6 +49,16 @@ export async function createGoogleCalendarEvent(
       }),
     },
   )
+
+  if (response.status === 409) {
+    return { id: calendarEventId(event.id) }
+  }
+
+  if (response.status === 401) {
+    throw new GoogleCalendarAuthorizationError(
+      'Your Google Calendar permission has expired. Please reconnect Google Calendar.',
+    )
+  }
 
   if (!response.ok) {
     const details = await response.text()
@@ -42,7 +69,6 @@ export async function createGoogleCalendarEvent(
     } catch {
       // Keep plain-text API responses as-is.
     }
-
     const safeDetails = detailMessage.trim().slice(0, 240)
     throw new Error(
       safeDetails

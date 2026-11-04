@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseEventEntry, parseLine } from '../src/lib/parseEvent'
+import { parseEventEntry, parseLine, validateDraft } from '../src/features/parser/parseEvent'
 
 const currentDate = new Date('2026-09-28T09:00:00.000Z')
 
@@ -41,6 +41,12 @@ describe('parseEventEntry', () => {
     expect(event?.id).toEqual(expect.any(String))
   })
 
+  it('normalizes dangling connector words from the title', () => {
+    const event = parseEventEntry('Lunch with Sam at October 2 at 12pm', currentDate)
+
+    expect(event?.title).toBe('Lunch with Sam')
+  })
+
   it('preserves an explicitly stated time range', () => {
     const event = parseEventEntry(
       'Planning workshop October 2, 2026 from 10am to 11:30am',
@@ -68,5 +74,34 @@ describe('parseEventEntry', () => {
     expect(event?.start).toBe(localDate(2026, 10, day, startHour, startMinute).toISOString())
     expect(event?.end).toBe(localDate(2026, 10, day, endHour, endMinute).toISOString())
     expect(event?.durationDefaulted).toBe(false)
+  })
+
+  it('assumes the next occurrence for a time-only line', () => {
+    const event = parseEventEntry('gym 6pm', new Date('2026-09-28T09:00:00.000Z'))
+
+    expect(event?.status).toBe('ready')
+    expect(event?.dateAssumed).toBe(true)
+    expect(event?.parseWarning).toContain('No date was provided')
+  })
+
+  it('warns when chrono finds multiple date/time matches', () => {
+    const event = parseEventEntry(
+      'Move standup from Tuesday 9am to Wednesday 10am',
+      currentDate,
+    )
+
+    expect(event?.status).toBe('ready')
+    expect(event?.parseWarning).toContain('Multiple date/time matches')
+  })
+
+  it('blocks an edited draft when the end is before the start', () => {
+    const draft = parseLine('Team sync tomorrow at 2pm', currentDate)
+    const invalid = validateDraft({
+      ...draft,
+      end: new Date(new Date(draft.start).getTime() - 1).toISOString(),
+    })
+
+    expect(invalid.status).toBe('blocked')
+    expect(invalid.blockedReason).toContain('end time')
   })
 })

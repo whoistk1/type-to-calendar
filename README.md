@@ -1,88 +1,51 @@
 # Type To Calendar
 
-Type To Calendar turns one event per line of natural-language text into editable Google Calendar drafts. Users can review, correct, select, and create multiple events independently, with blocked drafts and Google Calendar failures shown directly in the review flow.
+Type To Calendar turns one event per line of natural-language text into editable Google Calendar drafts.
 
-## Tech stack
+```text
+Team sync tomorrow at 2pm
+Planning workshop October 2 at 10am
+```
+
+Review, edit, select, and create multiple events independently. Invalid drafts stay visible with an explanation, and failed Calendar requests can be retried without creating duplicates.
+
+## Features
+
+- Natural-language date and time parsing with [`chrono-node`](https://github.com/wanasit/chrono).
+- One event per line with independent review and selection.
+- Editable title, start time, and end time.
+- One-hour default duration when no end time is provided.
+- Visible warnings for assumed dates and ambiguous date/time matches.
+- Google OAuth through Supabase Auth.
+- Idempotent Google Calendar creation using deterministic event IDs.
+- Per-event success, failure, and retry states.
+
+## Stack
 
 - React 19 and TypeScript
 - Vite
 - Tailwind CSS
-- Supabase Auth for Google OAuth and session restoration
+- Supabase Auth
 - Google Calendar API
-- `chrono-node` for natural-language date and time parsing
 - Vitest and Testing Library
 
-## Local setup
 
-### 1. Install dependencies
+## How it works
 
-```bash
-npm install
-```
+1. `AuthProvider` restores the Supabase session and subscribes to auth changes.
+2. The user enters one event per line.
+3. The parser creates ready or blocked drafts.
+4. `useDrafts` manages parsing, editing, selection, and creation state with a reducer.
+5. The Calendar API creates events in the signed-in user's primary calendar.
+6. A deterministic event ID makes retries safe; Google `409 Conflict` responses are treated as successful duplicate-safe retries.
 
-### 2. Create a Supabase project
+Authentication, parser, calendar, and draft state code live under [`src/features/`](./src/features/).
 
-1. Create a project at [supabase.com](https://supabase.com/).
-2. Open **Authentication > Providers** and enable Google.
-3. Copy the project URL and anon key from **Project Settings > API**.
-4. Copy `.env.example` to `.env.local` and set:
+## Known limitations
 
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-Never put a Supabase service-role key in this frontend application.
-
-### 3. Configure Google OAuth
-
-In Google Cloud Console:
-
-1. Create or select a Google Cloud project.
-2. Enable the **Google Calendar API**.
-3. Configure the OAuth consent screen as an **External** app.
-4. Add the app name, support email, and developer contact email.
-5. Add the scopes `openid`, `userinfo.email`, `userinfo.profile`, and `calendar.events`.
-6. While the app is in **Testing** mode, add every account that needs to sign in under **Test users**.
-7. Create a Web OAuth client.
-8. Add the Supabase callback URL as an authorized redirect URI:
-
-```text
-https://<your-project-ref>.supabase.co/auth/v1/callback
-```
-
-The `calendar.events` scope is sensitive. Publishing the app for unrestricted Google accounts may require Google's OAuth verification process.
-
-### 4. Configure Supabase URLs
-
-In **Authentication > URL Configuration**, add the local development URL to the allowed redirect URLs:
-
-```text
-http://localhost:5173
-```
-
-For a deployed app, also add its HTTPS URL. Keep the Supabase callback URL configured in the Google OAuth client.
-
-### 5. Start the app
-
-```bash
-npm run dev
-```
-
-Open the URL shown by Vite, normally `http://localhost:5173`.
-
-## Available scripts
-
-- `npm run dev` starts the Vite development server.
-- `npm run build` type-checks and builds the production bundle.
-- `npm run lint` runs ESLint.
-- `npm test` runs the test suite once.
-- `npm run test:watch` runs Vitest in watch mode.
-- `npm run preview` serves the production build locally.
-
-## Known Limitations
-
-- Google OAuth refresh tokens issued while the OAuth consent screen is in **Testing** mode expire after 7 days. Users may need to authorize the app again until the app is published and, where required, verified.
-- The app creates events in the signed-in user's primary calendar only.
-- Token refresh and server-side token handling are not implemented.
-- Duplicate retry idempotency, existing-event editing/deletion, multiple calendar selection, and browser-extension support are not included in v1.
+- Events are created only in the signed-in user's primary calendar.
+- Existing-event editing and deletion are not included.
+- Multiple calendar selection is not included.
+- Google OAuth refresh tokens issued while the consent screen is in Testing mode may expire after seven days.
+- Supabase does not refresh the Google provider token used for direct Calendar API calls. A Calendar `401` starts Google reauthorization automatically.
+- Server-side token handling, duplicate retry idempotency across separately recreated drafts, and browser-extension support are not included.

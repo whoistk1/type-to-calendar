@@ -1,120 +1,32 @@
 import { useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { parseLine, type EventDraft } from '../lib/parseEvent'
-import type { GoogleCalendarEventResponse } from '../lib/googleCalendar'
+import type { EventDraft } from '../features/parser/parseEvent'
+import type { GoogleCalendarEventResponse } from '../features/calendar/api'
+import { useDrafts } from '../features/drafts/useDrafts'
 import { Review } from './Review'
-import { SignIn } from './SignIn'
 
-export type { ParsedEvent } from '../lib/parseEvent'
+export type { ParsedEvent } from '../features/parser/parseEvent'
 
 interface EventEntryProps {
   onCreateEvent?: (draft: EventDraft) => Promise<GoogleCalendarEventResponse>
-  onSessionChange?: (session: Session | null) => void
 }
 
-type CreationState = 'idle' | 'pending' | 'success' | 'failure'
-type DraftState = {
-  creationState: CreationState
-  error?: string
-}
-
-export function EventEntry({ onCreateEvent, onSessionChange }: EventEntryProps) {
+export function EventEntry({ onCreateEvent }: EventEntryProps) {
   const [text, setText] = useState('')
-  const [drafts, setDrafts] = useState<EventDraft[]>([])
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [draftStates, setDraftStates] = useState<Record<string, DraftState>>({})
-  const [message, setMessage] = useState<string | null>(null)
-
-  function handleParse() {
-    const nextDrafts = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => parseLine(line))
-
-    setDrafts(nextDrafts)
-    setSelectedIds(new Set(nextDrafts.filter((draft) => draft.status === 'ready').map((draft) => draft.id)))
-    setDraftStates({})
-    setMessage(nextDrafts.length ? 'Review and edit your event drafts.' : 'Add at least one event line.')
-  }
-
-  function updateDraft(updatedDraft: EventDraft) {
-    setDrafts((currentDrafts) =>
-      currentDrafts.map((draft) => (draft.id === updatedDraft.id ? updatedDraft : draft)),
-    )
-  }
-
-  function toggleSelected(id: string) {
-    setSelectedIds((currentIds) => {
-      const nextIds = new Set(currentIds)
-      if (nextIds.has(id)) nextIds.delete(id)
-      else nextIds.add(id)
-      return nextIds
-    })
-  }
-
-  function removeDraft(id: string) {
-    setDrafts((currentDrafts) => currentDrafts.filter((draft) => draft.id !== id))
-    setSelectedIds((currentIds) => {
-      const nextIds = new Set(currentIds)
-      nextIds.delete(id)
-      return nextIds
-    })
-  }
-
-  async function createDraft(draft: EventDraft) {
-    if (!onCreateEvent || draft.status === 'blocked') return
-
-    setDraftStates((currentStates) => ({
-      ...currentStates,
-      [draft.id]: { creationState: 'pending' },
-    }))
-
-    try {
-      await onCreateEvent(draft)
-      setDraftStates((currentStates) => ({
-        ...currentStates,
-        [draft.id]: {
-          creationState: 'success',
-        },
-      }))
-    } catch (error) {
-      setDraftStates((currentStates) => ({
-        ...currentStates,
-        [draft.id]: {
-          creationState: 'failure',
-          error: error instanceof Error ? error.message : 'Unable to save this event.',
-        },
-      }))
-    }
-  }
-
-  async function createSelectedDrafts() {
-    const selectedDrafts = drafts.filter(
-      (draft) => selectedIds.has(draft.id) && draft.status === 'ready',
-    )
-    if (!selectedDrafts.length) {
-      setMessage('Select at least one ready event to create.')
-      return
-    }
-
-    setMessage(null)
-    for (const draft of selectedDrafts) {
-      await createDraft(draft)
-    }
-  }
-
+  const { state, dispatch, parseText, createDraft, createSelectedDrafts } = useDrafts(onCreateEvent)
+  const { drafts, selectedIds, draftStates, message } = state
   const readyCount = drafts.filter((draft) => draft.status === 'ready').length
   const blockedCount = drafts.filter((draft) => draft.status === 'blocked').length
   const hasPendingDraft = Object.values(draftStates).some(
     (state) => state.creationState === 'pending',
   )
-  const canCreate = drafts.some(
-    (draft) => draft.status === 'ready' && selectedIds.has(draft.id),
-  )
+  const canCreate = drafts.some((draft) => draft.status === 'ready' && selectedIds.has(draft.id))
   const hasCreatedEvent = Object.values(draftStates).some(
     (state) => state.creationState === 'success',
   )
+
+  function handleParse() {
+    parseText(text)
+  }
 
   return (
     <section className="w-full max-w-xl space-y-4">
@@ -126,10 +38,9 @@ export function EventEntry({ onCreateEvent, onSessionChange }: EventEntryProps) 
         value={text}
         placeholder={'Team sync tomorrow at 2pm\nPlanning workshop October 2 at 10am'}
         onChange={(event) => {
-          setText(event.target.value)
-          setDrafts([])
-          setDraftStates({})
-          setMessage(null)
+          const nextText = event.target.value
+          setText(nextText)
+          dispatch({ type: 'textChanged', text: nextText })
         }}
         className="min-h-32 w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
       />
@@ -157,9 +68,9 @@ export function EventEntry({ onCreateEvent, onSessionChange }: EventEntryProps) 
                   selected={selectedIds.has(draft.id)}
                   creationState={state.creationState}
                   error={state.error}
-                  onChange={updateDraft}
-                  onToggleSelected={() => toggleSelected(draft.id)}
-                  onRemove={() => removeDraft(draft.id)}
+                  onChange={(updatedDraft) => dispatch({ type: 'draftChanged', draft: updatedDraft })}
+                  onToggleSelected={() => dispatch({ type: 'selected', id: draft.id })}
+                  onRemove={() => dispatch({ type: 'removed', id: draft.id })}
                   onRetry={() => void createDraft(draft)}
                 />
               )
@@ -185,11 +96,6 @@ export function EventEntry({ onCreateEvent, onSessionChange }: EventEntryProps) 
           )}
         </>
       )}
-
-      <div className="pt-4">
-        <SignIn onSessionChange={onSessionChange} />
-      </div>
-
     </section>
   )
 }

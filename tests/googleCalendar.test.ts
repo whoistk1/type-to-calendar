@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createGoogleCalendarEvent } from '../src/lib/googleCalendar'
-import type { ParsedEvent } from '../src/lib/parseEvent'
+import { createGoogleCalendarEvent } from '../src/features/calendar/api'
+import type { ParsedEvent } from '../src/features/parser/parseEvent'
 
 const event: ParsedEvent = {
   id: 'event-id',
@@ -40,6 +40,7 @@ describe('createGoogleCalendarEvent', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id: '6576656e742d6964',
           summary: 'Team sync',
           description: 'Discuss project status',
           start: { dateTime: event.start },
@@ -51,7 +52,7 @@ describe('createGoogleCalendarEvent', () => {
 
   it('rejects when the session has no provider token', async () => {
     await expect(createGoogleCalendarEvent(session(), event)).rejects.toThrow(
-      'Your Google Calendar permission has expired. Please sign in again.',
+      'Your Google Calendar permission has expired. Please reconnect Google Calendar.',
     )
   })
 
@@ -64,5 +65,13 @@ describe('createGoogleCalendarEvent', () => {
     await expect(createGoogleCalendarEvent(session('google-token'), event)).rejects.toThrow(
       'Google Calendar could not save this event (403): permission denied',
     )
+  })
+
+  it('treats a conflict as an idempotent success', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 409 })))
+
+    await expect(createGoogleCalendarEvent(session('google-token'), event)).resolves.toEqual({
+      id: '6576656e742d6964',
+    })
   })
 })

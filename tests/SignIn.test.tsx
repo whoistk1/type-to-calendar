@@ -1,57 +1,43 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Session } from '@supabase/supabase-js'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { SignIn } from '../src/features/auth/components/SignIn'
 
-const authMock = vi.hoisted(() => ({
-  onAuthStateChange: vi.fn(),
-  getSession: vi.fn(),
-}))
+const session = { user: { email: 'calendar@example.com' } } as Session
 
-vi.mock('../src/lib/supabaseClient', () => ({
-  supabase: { auth: authMock },
-}))
+describe('SignIn', () => {
+  afterEach(cleanup)
 
-import { SignIn } from '../src/components/SignIn'
+  it('renders the sign-in action without owning auth state', () => {
+    const onSignIn = vi.fn()
+    render(
+      <SignIn
+        session={null}
+        loading={false}
+        onSignIn={onSignIn}
+        onSignOut={vi.fn()}
+      />,
+    )
 
-const restoredSession = {
-  user: { email: 'calendar@example.com' },
-} as Session
-
-describe('SignIn session state', () => {
-  beforeEach(() => {
-    authMock.onAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: vi.fn() } },
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
+    expect(onSignIn).toHaveBeenCalledOnce()
   })
 
-  afterEach(() => {
-    cleanup()
-    vi.clearAllMocks()
-  })
+  it('renders sign out for an authenticated session', () => {
+    const onSignOut = vi.fn()
+    render(
+      <SignIn
+        session={session}
+        loading={false}
+        onSignIn={vi.fn()}
+        onSignOut={onSignOut}
+      />,
+    )
 
-  it('restores a signed-in session on mount', async () => {
-    authMock.getSession.mockResolvedValue({ data: { session: restoredSession } })
-    const onSessionChange = vi.fn()
-
-    render(<SignIn onSessionChange={onSessionChange} />)
-
-    expect(
-      await screen.findByRole('button', { name: 'Sign out of Google Calendar' }),
-    ).toBeInTheDocument()
-    await waitFor(() => expect(onSessionChange).toHaveBeenCalledWith(restoredSession))
-  })
-
-  it('shows only the sign-in action when no session is restored', async () => {
-    authMock.getSession.mockResolvedValue({ data: { session: null } })
-
-    render(<SignIn />)
-
-    expect(await screen.findByRole('button', { name: 'Sign In with Google' })).toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Sign out of Google Calendar' }),
-    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out of Google Calendar' }))
+    expect(onSignOut).toHaveBeenCalledOnce()
   })
 })

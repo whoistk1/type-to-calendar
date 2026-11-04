@@ -1,4 +1,4 @@
-import type { EventDraft } from '../lib/parseEvent'
+import type { EventDraft } from '../features/parser/parseEvent'
 
 interface ReviewProps {
   draft: EventDraft
@@ -53,7 +53,7 @@ export function Review({
         />
       </label>
 
-      {draft.status === 'ready' ? (
+      {draft.status === 'ready' || draft.start || draft.end ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="font-medium text-gray-900">
             Starts
@@ -78,6 +78,12 @@ export function Review({
         <p className="mt-3 text-red-700">Blocked: {draft.blockedReason}</p>
       )}
 
+      {draft.status === 'blocked' && (draft.start || draft.end) && (
+        <p className="mt-3 text-red-700">Blocked: {draft.blockedReason}</p>
+      )}
+      {draft.parseWarning && (
+        <p className="mt-2 text-amber-700">{draft.parseWarning}</p>
+      )}
       {draft.durationDefaulted && (
         <p className="mt-2 text-gray-600">End time defaulted to one hour after the start.</p>
       )}
