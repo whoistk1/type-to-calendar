@@ -4,6 +4,10 @@ export interface ParsedEvent {
   id: string
   title: string
   description: string
+  location?: string
+  calendarId?: string
+  isAllDay?: boolean
+  rawText?: string
   start: string
   end: string
   syncToCalendar: boolean
@@ -24,11 +28,12 @@ function normalizeTitle(title: string) {
     .trim()
 }
 
-function createBlockedDraft(title: string, blockedReason: string): EventDraft {
+function createBlockedDraft(title: string, blockedReason: string, rawText?: string): EventDraft {
   return {
     id: crypto.randomUUID(),
     title: normalizeTitle(title),
     description: '',
+    rawText: rawText || title,
     start: '',
     end: '',
     syncToCalendar: false,
@@ -66,11 +71,11 @@ export function validateDraft(draft: EventDraft): EventDraft {
 
 export function parseLine(text: string, currentDate: Date = new Date()): EventDraft {
   const trimmed = text.trim()
-  if (!trimmed) return createBlockedDraft('', 'Add an event description with a specific date and time.')
+  if (!trimmed) return createBlockedDraft('', 'Add an event description with a specific date and time.', trimmed)
 
   const results = chrono.parse(trimmed, currentDate, { forwardDate: true })
   if (results.length === 0) {
-    return createBlockedDraft(trimmed, 'A date or time could not be determined.')
+    return createBlockedDraft(trimmed, 'A date or time could not be determined.', trimmed)
   }
 
   const result = results[0]
@@ -86,6 +91,7 @@ export function parseLine(text: string, currentDate: Date = new Date()): EventDr
     return createBlockedDraft(
       title || trimmed,
       'Add a specific time before creating this event.',
+      trimmed,
     )
   }
 
@@ -105,6 +111,7 @@ export function parseLine(text: string, currentDate: Date = new Date()): EventDr
     id: crypto.randomUUID(),
     title: title || trimmed,
     description: '',
+    rawText: trimmed,
     start: start.toISOString(),
     end: end.toISOString(),
     syncToCalendar: true,

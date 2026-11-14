@@ -25,20 +25,31 @@ function CalendarApp() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 flex flex-col">
       {session ? (
-        <section className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-8">
-          <h1 className="mb-6 text-3xl font-bold text-gray-950 text-center">Create an event</h1>
-          <EventEntry onCreateEvent={handleCreateEvent} />
-          <div className="pt-4">
-            <SignIn
-              session={session}
-              loading={loading}
-              onSignIn={() => void signIn()}
-              onSignOut={() => void signOut()}
-            />
+        <>
+          <header className="w-full border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+            <div className="mx-auto flex max-w-4xl items-center justify-between">
+              <span className="font-semibold text-gray-900 tracking-tight text-lg">
+                Type To Calendar
+              </span>
+              <SignIn
+                session={session}
+                loading={loading}
+                onSignIn={() => void signIn()}
+                onSignOut={() => void signOut()}
+              />
+            </div>
+          </header>
+          <div className="flex-1 flex flex-col justify-center px-4 py-8">
+            <section className="mx-auto w-full max-w-xl">
+              <h1 className="mb-2 text-3xl font-bold text-gray-950 text-center tracking-tight">
+                Create an event
+              </h1>
+              <EventEntry onCreateEvent={handleCreateEvent} />
+            </section>
           </div>
-        </section>
+        </>
       ) : (
         <Landing
           appName="Type To Calendar"

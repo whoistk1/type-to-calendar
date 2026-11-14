@@ -32,8 +32,11 @@ export async function createGoogleCalendarEvent(
     )
   }
 
+  const calendarId = encodeURIComponent(event.calendarId || 'primary')
+  const isAllDay = Boolean(event.isAllDay)
+
   const response = await fetch(
-    'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+    `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
     {
       method: 'POST',
       headers: {
@@ -44,8 +47,9 @@ export async function createGoogleCalendarEvent(
         id: calendarEventId(event.id),
         summary: event.title,
         description: event.description || undefined,
-        start: { dateTime: event.start },
-        end: { dateTime: event.end },
+        location: event.location || undefined,
+        start: isAllDay ? { date: event.start.slice(0, 10) } : { dateTime: event.start },
+        end: isAllDay ? { date: event.end.slice(0, 10) } : { dateTime: event.end },
       }),
     },
   )

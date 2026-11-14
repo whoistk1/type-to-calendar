@@ -52,4 +52,35 @@ describe('EventEntry', () => {
     await waitFor(() => expect(onCreateEvent).toHaveBeenCalledTimes(3))
     expect(screen.getAllByText('Created')).toHaveLength(2)
   })
+
+  it('disables the review button when empty and enables when text is typed', () => {
+    render(<EventEntry />)
+    const button = screen.getByRole('button', { name: 'Review events' })
+    expect(button).toBeDisabled()
+
+    const textarea = screen.getByLabelText('Enter one event per line')
+    fireEvent.change(textarea, { target: { value: 'Lunch with Sam Friday 12pm' } })
+    expect(button).toBeEnabled()
+  })
+
+  it('fills text when clicking an example chip', () => {
+    render(<EventEntry />)
+    const textarea = screen.getByLabelText('Enter one event per line') as HTMLTextAreaElement
+    expect(textarea.value).toBe('')
+
+    const chip = screen.getByRole('button', { name: 'Lunch with Sam Friday 12pm' })
+    fireEvent.click(chip)
+
+    expect(textarea.value).toBe('Lunch with Sam Friday 12pm')
+    expect(screen.getByRole('button', { name: 'Review events' })).toBeEnabled()
+  })
+
+  it('triggers parsing with Ctrl+Enter or Cmd+Enter', () => {
+    render(<EventEntry />)
+    const textarea = screen.getByLabelText('Enter one event per line')
+    fireEvent.change(textarea, { target: { value: 'Lunch with Sam Friday 12pm' } })
+
+    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true })
+    expect(screen.getByText('1 events ready, 0 blocked')).toBeInTheDocument()
+  })
 })

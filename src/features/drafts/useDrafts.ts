@@ -18,7 +18,10 @@ type Action =
   | { type: 'parsed'; drafts: EventDraft[] }
   | { type: 'draftChanged'; draft: EventDraft }
   | { type: 'selected'; id: string }
+  | { type: 'selectAll' }
+  | { type: 'deselectAll' }
   | { type: 'removed'; id: string }
+  | { type: 'restored'; draft: EventDraft; index?: number }
   | { type: 'creationStarted'; id: string }
   | { type: 'creationSucceeded'; id: string }
   | { type: 'creationFailed'; id: string; error: string }
@@ -58,12 +61,34 @@ function reducer(state: State, action: Action): State {
       else selectedIds.add(action.id)
       return { ...state, selectedIds }
     }
+    case 'selectAll': {
+      const readyIds = state.drafts
+        .filter((draft) => draft.status === 'ready')
+        .map((draft) => draft.id)
+      return { ...state, selectedIds: new Set(readyIds) }
+    }
+    case 'deselectAll': {
+      return { ...state, selectedIds: new Set() }
+    }
     case 'removed':
       return {
         ...state,
         drafts: state.drafts.filter((draft) => draft.id !== action.id),
         selectedIds: new Set([...state.selectedIds].filter((id) => id !== action.id)),
       }
+    case 'restored': {
+      const drafts = [...state.drafts]
+      const index =
+        typeof action.index === 'number' && action.index >= 0 && action.index <= drafts.length
+          ? action.index
+          : drafts.length
+      drafts.splice(index, 0, action.draft)
+      const selectedIds = new Set(state.selectedIds)
+      if (action.draft.status === 'ready') {
+        selectedIds.add(action.draft.id)
+      }
+      return { ...state, drafts, selectedIds }
+    }
     case 'creationStarted':
       return { ...state, draftStates: { ...state.draftStates, [action.id]: { creationState: 'pending' } } }
     case 'creationSucceeded':
@@ -122,5 +147,9 @@ export function useDrafts(
     }),
     createDraft,
     createSelectedDrafts,
+    selectAll: () => dispatch({ type: 'selectAll' }),
+    deselectAll: () => dispatch({ type: 'deselectAll' }),
+    restoreDraft: (draft: EventDraft, index?: number) =>
+      dispatch({ type: 'restored', draft, index }),
   }
 }

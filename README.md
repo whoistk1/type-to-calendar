@@ -28,6 +28,34 @@ Review, edit, select, and create multiple events independently. Invalid drafts s
 - Supabase Auth
 - Google Calendar API
 - Vitest and Testing Library
+- Docker & Nginx (Multi-stage build & production hosting)
+- GitHub Actions (Automated CI/CD pipeline)
+
+## Running with Docker
+
+### Local Development / Testing
+
+Build and run using Docker Compose:
+```bash
+docker compose up --build
+```
+Access the application at [http://localhost:8080](http://localhost:8080).
+
+Or build and run the Docker image directly:
+```bash
+docker build -t type-to-calendar .
+docker run -p 8080:80 type-to-calendar
+```
+
+## CI/CD Pipeline
+
+The GitHub Actions workflow (`.github/workflows/docker-ci-cd.yml`) automatically runs on pushes and pull requests to `main`:
+1. **CI**: Lints (`eslint`), runs tests (`vitest`), and validates the production TypeScript/Vite build.
+2. **Docker CD**: Builds the container image with multi-stage caching and publishes it to GitHub Container Registry (`ghcr.io`).
+
+Optional GitHub Repository Secrets:
+- `VITE_SUPABASE_URL`: Supabase project URL for production builds.
+- `VITE_SUPABASE_ANON_KEY`: Supabase anon key for production builds.
 
 
 ## How it works
