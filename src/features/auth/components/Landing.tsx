@@ -28,9 +28,6 @@ export function Landing({ appName, session, loading, onSignIn, onSignOut }: Land
             onSignIn={onSignIn}
             onSignOut={onSignOut}
           />
-          <p className="text-xs text-gray-500">
-            We only add events. We never read your calendar.
-          </p>
         </div>
       </div>
     </section>
