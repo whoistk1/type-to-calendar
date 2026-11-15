@@ -43,6 +43,7 @@ Authentication, parser, calendar, and draft state code live under [`src/features
 
 ## Known limitations
 
+- Currently available only to testers
 - Events are created only in the signed-in user's primary calendar.
 - Existing-event editing and deletion are not included.
 - Multiple calendar selection is not included.
