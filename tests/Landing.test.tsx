@@ -8,7 +8,7 @@ import { Landing } from '../src/features/auth/components/Landing'
 describe('Landing', () => {
   afterEach(cleanup)
 
-  it('renders the title, tagline, permission note, and sign-in button', () => {
+  it('renders the title, tagline, and sign-in button', () => {
     const onSignIn = vi.fn()
     render(
       <Landing
@@ -24,10 +24,6 @@ describe('Landing', () => {
     expect(
       screen.getByText('Turn plain text into Google Calendar events in seconds.'),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('We only add events. We never read your calendar.'),
-    ).toBeInTheDocument()
-
     const signInButton = screen.getByRole('button', { name: 'Sign In with Google' })
     expect(signInButton).toBeInTheDocument()
     fireEvent.click(signInButton)

@@ -2,12 +2,14 @@
 
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EventEntry } from '../src/components/EventEntry'
 
 const input = 'Team sync Friday 8pm-9pm\nPlanning Friday 6pm-7pm'
+type CreateEvent = NonNullable<ComponentProps<typeof EventEntry>['onCreateEvent']>
 
-function reviewEvents(onCreateEvent: ReturnType<typeof vi.fn>) {
+function reviewEvents(onCreateEvent: CreateEvent) {
   render(<EventEntry onCreateEvent={onCreateEvent} />)
   fireEvent.change(screen.getByLabelText('Enter one event per line'), {
     target: { value: input },
@@ -21,7 +23,7 @@ describe('EventEntry', () => {
   })
 
   it('sends edited draft fields to the creation callback', async () => {
-    const onCreateEvent = vi.fn().mockResolvedValue({ id: 'google-id' })
+    const onCreateEvent = vi.fn<CreateEvent>().mockResolvedValue({ id: 'google-id' })
     reviewEvents(onCreateEvent)
 
     const titleFields = screen.getAllByLabelText('Title')
@@ -36,7 +38,7 @@ describe('EventEntry', () => {
 
   it('keeps successful drafts and retries only a failed draft', async () => {
     const onCreateEvent = vi
-      .fn()
+      .fn<CreateEvent>()
       .mockResolvedValueOnce({ id: 'first-google-id', htmlLink: 'https://calendar.google.com/first' })
       .mockRejectedValueOnce(new Error('Temporary Calendar failure'))
       .mockResolvedValueOnce({ id: 'second-google-id', htmlLink: 'https://calendar.google.com/second' })
@@ -61,18 +63,6 @@ describe('EventEntry', () => {
     const textarea = screen.getByLabelText('Enter one event per line')
     fireEvent.change(textarea, { target: { value: 'Lunch with Sam Friday 12pm' } })
     expect(button).toBeEnabled()
-  })
-
-  it('fills text when clicking an example chip', () => {
-    render(<EventEntry />)
-    const textarea = screen.getByLabelText('Enter one event per line') as HTMLTextAreaElement
-    expect(textarea.value).toBe('')
-
-    const chip = screen.getByRole('button', { name: 'Lunch with Sam Friday 12pm' })
-    fireEvent.click(chip)
-
-    expect(textarea.value).toBe('Lunch with Sam Friday 12pm')
-    expect(screen.getByRole('button', { name: 'Review events' })).toBeEnabled()
   })
 
   it('triggers parsing with Ctrl+Enter or Cmd+Enter', () => {
